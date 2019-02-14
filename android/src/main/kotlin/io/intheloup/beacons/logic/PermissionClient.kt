@@ -5,6 +5,7 @@ package io.intheloup.beacons.logic
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -32,16 +33,16 @@ class PermissionClient {
         return@RequestPermissionsResultListener false
     }
 
-    private var activity: Activity? = null
+    private var context: Context? = null
     private val permissionCallbacks = ArrayList<Callback<Unit, Unit>>()
 
 
-    fun bind(activity: Activity) {
-        this.activity = activity
+    fun bind(context: Context) {
+        this.context = context
     }
 
     fun unbind() {
-        activity = null
+        context = null
     }
 
     fun check(permission: Permission): PermissionResult {
@@ -67,7 +68,10 @@ class PermissionClient {
                         failure = { _ -> cont.resume(PermissionResult.Denied) }
                 )
                 permissionCallbacks.add(callback)
-                ActivityCompat.requestPermissions(activity!!, arrayOf(permission.manifestValue), BeaconsPlugin.Intents.PermissionRequestId)
+
+                if (context!! is Activity?) {
+                    ActivityCompat.requestPermissions(context!! as Activity, arrayOf(permission.manifestValue), BeaconsPlugin.Intents.PermissionRequestId)
+                }
             }
         }
 
@@ -76,8 +80,8 @@ class PermissionClient {
     // Internals
 
     private fun checkDeclaration(permission: Permission): Boolean {
-        val permissions = activity!!.packageManager
-                .getPackageInfo(activity!!.packageName, PackageManager.GET_PERMISSIONS)
+        val permissions = context!!.packageManager
+                .getPackageInfo(context!!.packageName, PackageManager.GET_PERMISSIONS)
                 .requestedPermissions
 
         return when {
@@ -88,8 +92,8 @@ class PermissionClient {
     }
 
     private fun checkGranted() =
-            ContextCompat.checkSelfPermission(activity!!, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-                    ContextCompat.checkSelfPermission(activity!!, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context!!, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(context!!, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
 
     class Callback<in T, in E>(val success: (T) -> Unit, val failure: (E) -> Unit)
