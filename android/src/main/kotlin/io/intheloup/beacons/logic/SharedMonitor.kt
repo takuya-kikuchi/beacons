@@ -28,17 +28,6 @@ class SharedMonitor(private val application: Application,
 
     private var foregroundNotifier: MonitorNotifier? = null
 
-    init {
-        // When monitor is running in background, it might not detect right monitoring event
-        // probably happen only on android 8+ with the 15min scan delay
-        // however by add/removing a random region, it triggers a monitoring scan directly
-        // making background monitoring detection much faster
-        // todo: discuss this with android-beacon-library's author
-        val fakeRegion = Region(UUID.randomUUID().toString(), Identifier.fromUuid(UUID.randomUUID()), null, null)
-        regionBootstrap.addRegion(fakeRegion)
-        regionBootstrap.removeRegion(fakeRegion)
-    }
-
     fun attachForegroundNotifier(notifier: MonitorNotifier) {
         Log.d(Tag, "attach foreground notifier")
         this.foregroundNotifier = notifier

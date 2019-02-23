@@ -5,7 +5,7 @@ package io.intheloup.beacons
 
 import android.app.Activity
 import android.app.Application
-import android.content.Intent
+import android.app.PendingIntent
 import android.os.Bundle
 import io.flutter.plugin.common.PluginRegistry.Registrar
 import io.intheloup.beacons.channel.Channels
@@ -20,8 +20,10 @@ class BeaconsPlugin(val registrar: Registrar) {
     private val channels = Channels(permissionClient, beaconClient)
 
     init {
+        println("(${beaconClient.isAnyConsumerBound})")
         registrar.addRequestPermissionsResultListener(permissionClient.listener)
 
+        println("(${beaconClient.isAnyConsumerBound})")
         beaconClient.bind(registrar.activity())
         permissionClient.bind(registrar.activity())
 
@@ -63,8 +65,8 @@ class BeaconsPlugin(val registrar: Registrar) {
 
     companion object {
 
-        fun init(application: Application, callback: BackgroundMonitoringCallback) {
-            BeaconsClient.init(application, callback)
+        fun init(application: Application, notificationTitle: String, notificationIcon: Int, pendingIntent: PendingIntent, callback: BackgroundMonitoringCallback) {
+            BeaconsClient.init(application, notificationTitle, notificationIcon, pendingIntent, callback)
         }
 
         @JvmStatic

@@ -4,12 +4,13 @@
 package io.intheloup.beacons.logic
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.app.Application
+import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import io.intheloup.beacons.BeaconsPlugin
 import io.intheloup.beacons.channel.DataRequest
 import io.intheloup.beacons.data.*
@@ -20,6 +21,7 @@ import org.altbeacon.beacon.*
 import org.altbeacon.beacon.logging.LogManager
 import org.altbeacon.beacon.logging.Loggers
 import java.util.*
+import androidx.core.content.ContextCompat.getSystemService
 
 
 class BeaconsClient(private val permissionClient: PermissionClient) : BeaconConsumer, RangeNotifier, MonitorNotifier {
@@ -31,8 +33,23 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
         private var beaconManager: BeaconManager? = null
         private var sharedMonitor: SharedMonitor? = null
 
-        fun init(application: Application, callback: BeaconsPlugin.BackgroundMonitoringCallback) {
+        fun init(application: Application, title: String, icon: Int, pendingIntent: PendingIntent, callback: BeaconsPlugin.BackgroundMonitoringCallback) {
             beaconManager = BeaconManager.getInstanceForApplication(application)
+
+            println("1 isConsumed: ${beaconManager!!.isAnyConsumerBound}")
+
+            val channelId = "gleipnir.notifications"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(channelId, "Gleipnir App", NotificationManager.IMPORTANCE_LOW)
+                (application.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
+            }
+            val builder = NotificationCompat.Builder(application, channelId)
+            builder.setSmallIcon(icon)
+            builder.setContentTitle(title)
+            builder.setContentIntent(pendingIntent)
+
+            beaconManager!!.enableForegroundServiceScanning(builder.build(), 456)
+            beaconManager!!.setEnableScheduledScanJobs(false)
 
             // Add parsing support for iBeacon and Eddystone
             // https://beaconlayout.wordpress.com/
@@ -41,7 +58,9 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
             beaconManager!!.beaconParsers.add(BeaconParser().setBeaconLayout("s:0-1=feaa,m:2-2=00,p:3-3:-41,i:4-13,i:14-19"))
             beaconManager!!.beaconParsers.add(BeaconParser().setBeaconLayout("s:0-1=feaa,m:2-2=10,p:3-3:-41,i:4-20v"))
 
+            println("2 isConsumed: ${beaconManager!!.isAnyConsumerBound}")
             sharedMonitor = SharedMonitor(application, callback)
+            println("3 isConsumed: ${beaconManager!!.isAnyConsumerBound}")
         }
     }
 
@@ -50,11 +69,18 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
     private var isPaused = false
 
     private val requests: ArrayList<Operation> = ArrayList()
-
+    private var isBound = false
+    val isAnyConsumerBound: Boolean? get() = beaconManager?.isAnyConsumerBound
 
     fun bind(activity: Activity) {
         this.activity = activity
-        beaconManager!!.bind(this)
+
+        println("bind to $activity (${beaconManager!!.isAnyConsumerBound})")
+
+        if (!isBound) {
+            beaconManager!!.bind(this)
+        }
+        isBound = true
     }
 
     fun unbind() {
