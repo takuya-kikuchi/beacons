@@ -65,8 +65,8 @@ class BeaconsPlugin(val registrar: Registrar) {
 
     companion object {
 
-        fun init(application: Application, notificationTitle: String, notificationIcon: Int, pendingIntent: PendingIntent, callback: BackgroundMonitoringCallback) {
-            BeaconsClient.init(application, notificationTitle, notificationIcon, pendingIntent, callback)
+        fun init(application: Application, notificationTitle: String, notificationIcon: Int, notificationChannelId: String, notificationChannelName: String, pendingIntent: PendingIntent, callback: BackgroundMonitoringCallback) {
+            BeaconsClient.init(application, notificationTitle, notificationIcon, notificationChannelId, notificationChannelName, pendingIntent, callback)
         }
 
         @JvmStatic

@@ -33,17 +33,14 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
         private var beaconManager: BeaconManager? = null
         private var sharedMonitor: SharedMonitor? = null
 
-        fun init(application: Application, title: String, icon: Int, pendingIntent: PendingIntent, callback: BeaconsPlugin.BackgroundMonitoringCallback) {
+        fun init(application: Application, title: String, icon: Int, notificationChannelId: String, notificationChannelName: String, pendingIntent: PendingIntent, callback: BeaconsPlugin.BackgroundMonitoringCallback) {
             beaconManager = BeaconManager.getInstanceForApplication(application)
 
-            println("1 isConsumed: ${beaconManager!!.isAnyConsumerBound}")
-
-            val channelId = "gleipnir.notifications"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(channelId, "Gleipnir App", NotificationManager.IMPORTANCE_LOW)
+                val channel = NotificationChannel(notificationChannelId, notificationChannelName, NotificationManager.IMPORTANCE_LOW)
                 (application.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
             }
-            val builder = NotificationCompat.Builder(application, channelId)
+            val builder = NotificationCompat.Builder(application, notificationChannelId)
             builder.setSmallIcon(icon)
             builder.setContentTitle(title)
             builder.setContentIntent(pendingIntent)
@@ -58,9 +55,7 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
             beaconManager!!.beaconParsers.add(BeaconParser().setBeaconLayout("s:0-1=feaa,m:2-2=00,p:3-3:-41,i:4-13,i:14-19"))
             beaconManager!!.beaconParsers.add(BeaconParser().setBeaconLayout("s:0-1=feaa,m:2-2=10,p:3-3:-41,i:4-20v"))
 
-            println("2 isConsumed: ${beaconManager!!.isAnyConsumerBound}")
             sharedMonitor = SharedMonitor(application, callback)
-            println("3 isConsumed: ${beaconManager!!.isAnyConsumerBound}")
         }
     }
 
@@ -74,8 +69,6 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
 
     fun bind(activity: Activity) {
         this.activity = activity
-
-        println("bind to $activity (${beaconManager!!.isAnyConsumerBound})")
 
         if (!isBound) {
             beaconManager!!.bind(this)
