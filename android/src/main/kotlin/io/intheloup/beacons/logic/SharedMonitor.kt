@@ -29,7 +29,7 @@ class SharedMonitor(private val application: Application,
     private var foregroundNotifier: MonitorNotifier? = null
 
     fun attachForegroundNotifier(notifier: MonitorNotifier) {
-        Log.d(Tag, "attach foreground notifier")
+        Log.d(Tag, "attach foreground notifier ${this.foregroundNotifier} : ${notifier}")
         this.foregroundNotifier = notifier
 
         // foreground notifier being attached means background logic is already processed
@@ -38,8 +38,9 @@ class SharedMonitor(private val application: Application,
     }
 
     fun detachForegroundNotifier(notifier: MonitorNotifier) {
-        Log.d(Tag, "detach foreground notifier")
-        check(this.foregroundNotifier == notifier)
+        Log.d(Tag, "detach foreground notifier, ${this.foregroundNotifier} : ${notifier}")
+        // TODO: avoid to crash temporally
+        //check(this.foregroundNotifier == notifier)
         this.foregroundNotifier = null
     }
 

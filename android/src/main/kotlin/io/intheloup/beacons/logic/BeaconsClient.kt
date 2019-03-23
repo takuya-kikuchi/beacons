@@ -8,9 +8,7 @@ import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.os.Build
 import android.util.Log
-import androidx.core.app.NotificationCompat
 import io.intheloup.beacons.BeaconsPlugin
 import io.intheloup.beacons.channel.DataRequest
 import io.intheloup.beacons.data.*
@@ -21,7 +19,6 @@ import org.altbeacon.beacon.*
 import org.altbeacon.beacon.logging.LogManager
 import org.altbeacon.beacon.logging.Loggers
 import java.util.*
-import androidx.core.content.ContextCompat.getSystemService
 
 
 class BeaconsClient(private val permissionClient: PermissionClient) : BeaconConsumer, RangeNotifier, MonitorNotifier {
@@ -33,19 +30,12 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
         private var beaconManager: BeaconManager? = null
         private var sharedMonitor: SharedMonitor? = null
 
-        fun init(application: Application, title: String, icon: Int, notificationChannelId: String, notificationChannelName: String, pendingIntent: PendingIntent, callback: BeaconsPlugin.BackgroundMonitoringCallback) {
+        fun init(application: Application, callback: BeaconsPlugin.BackgroundMonitoringCallback, notification: Notification) {
             beaconManager = BeaconManager.getInstanceForApplication(application)
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(notificationChannelId, notificationChannelName, NotificationManager.IMPORTANCE_LOW)
-                (application.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
-            }
-            val builder = NotificationCompat.Builder(application, notificationChannelId)
-            builder.setSmallIcon(icon)
-            builder.setContentTitle(title)
-            builder.setContentIntent(pendingIntent)
+            Log.d(Tag, "init BeaconsClient ${this}")
 
-            beaconManager!!.enableForegroundServiceScanning(builder.build(), 456)
+            beaconManager!!.enableForegroundServiceScanning(notification, 456)
             beaconManager!!.setEnableScheduledScanJobs(false)
 
             // Add parsing support for iBeacon and Eddystone
@@ -70,6 +60,7 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
     fun bind(activity: Activity) {
         this.activity = activity
 
+        Log.d(Tag, "bind, $isBound, ${beaconManager!!.isAnyConsumerBound}, $this")
         if (!isBound) {
             beaconManager!!.bind(this)
         }
@@ -108,12 +99,12 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
     }
 
     fun addBackgroundMonitoringListener(listener: SharedMonitor.BackgroundListener) {
-        Log.d(Tag, "addBackgroundMonitoringListener")
+        Log.d(Tag, "addBackgroundMonitoringListener (${this})")
         sharedMonitor!!.addBackgroundListener(listener)
     }
 
     fun removeBackgroundMonitoringListener(listener: SharedMonitor.BackgroundListener) {
-        Log.d(Tag, "removeBackgroundMonitoringListener")
+        Log.d(Tag, "removeBackgroundMonitoringListener (${this})")
         sharedMonitor!!.removeBackgroundListener(listener)
     }
 
@@ -179,6 +170,7 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
     // Lifecycle api
 
     fun resume() {
+        Log.d(Tag, "on resume ${requests.size} $requests")
         isPaused = false
         sharedMonitor!!.attachForegroundNotifier(this)
 
@@ -187,6 +179,7 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
     }
 
     fun pause() {
+        Log.d(Tag, "on pause ${requests.size} $requests")
         isPaused = true
         sharedMonitor!!.detachForegroundNotifier(this)
 
@@ -201,7 +194,7 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
         if (!isServiceConnected) return
 
         if (requests.count { it.region.identifier == request.region.identifier && it.kind == request.kind && it.isRunning } == 0) {
-            Log.d(Tag, "start ${request.kind} (inBackground:${request.inBackground}) for region: ${request.region.identifier}")
+            Log.d(Tag, "start ${request.kind} (inBackground:${request.inBackground}) for region: ${request.region.identifier} (${this})")
 
             when (request.kind) {
                 Operation.Kind.Ranging -> beaconManager!!.startRangingBeaconsInRegion(request.region.frameworkValue)
@@ -242,14 +235,14 @@ class BeaconsClient(private val permissionClient: PermissionClient) : BeaconCons
     }
 
     override fun didEnterRegion(region: Region) {
-        Log.d(Tag, "didEnterRegion: ${region.uniqueId}")
+        Log.d(Tag, "didEnterRegion: ${region.uniqueId} (${this})")
         requests.filter { it.callback != null }
                 .filter { it.kind == Operation.Kind.Monitoring && it.region.identifier == region.uniqueId }
                 .forEach { it.callback!!(Result.success(MonitoringState.EnterOrInside, RegionModel.parse(region))) }
     }
 
     override fun didExitRegion(region: Region) {
-        Log.d(Tag, "didExitRegion: ${region.uniqueId}")
+        Log.d(Tag, "didExitRegion: ${region.uniqueId} (${this})")
         requests.filter { it.callback != null }
                 .filter { it.kind == Operation.Kind.Monitoring && it.region.identifier == region.uniqueId }
                 .forEach { it.callback!!(Result.success(MonitoringState.ExitOrOutside, RegionModel.parse(region))) }

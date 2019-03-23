@@ -3,15 +3,18 @@
 
 package io.intheloup.beacons
 
-import android.app.Activity
-import android.app.Application
-import android.app.PendingIntent
+import android.app.*
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import io.flutter.plugin.common.PluginRegistry.Registrar
 import io.intheloup.beacons.channel.Channels
 import io.intheloup.beacons.data.BackgroundMonitoringEvent
 import io.intheloup.beacons.logic.BeaconsClient
 import io.intheloup.beacons.logic.PermissionClient
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import org.altbeacon.beacon.BeaconManager
 
 class BeaconsPlugin(val registrar: Registrar) {
 
@@ -20,29 +23,34 @@ class BeaconsPlugin(val registrar: Registrar) {
     private val channels = Channels(permissionClient, beaconClient)
 
     init {
-        println("(${beaconClient.isAnyConsumerBound})")
+
         registrar.addRequestPermissionsResultListener(permissionClient.listener)
 
-        println("(${beaconClient.isAnyConsumerBound})")
         beaconClient.bind(registrar.activity())
         permissionClient.bind(registrar.activity())
 
+        Log.d("beacons", "register lifecycle callbacks $this, ${beaconClient}")
+
         registrar.activity().application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+                Log.d("beacons", "bind $beaconClient to $activity")
                 beaconClient.bind(activity)
                 permissionClient.bind(activity)
             }
 
             override fun onActivityDestroyed(activity: Activity) {
+                Log.d("beacons", "unbind $beaconClient to $activity")
                 beaconClient.unbind()
                 permissionClient.unbind()
             }
 
             override fun onActivityResumed(activity: Activity?) {
+                Log.d("beacons", "notify resuming to $beaconClient ($activity)")
                 beaconClient.resume()
             }
 
             override fun onActivityPaused(activity: Activity?) {
+                Log.d("beacons", "notify pausing to $beaconClient ($activity)")
                 beaconClient.pause()
             }
 
@@ -66,7 +74,17 @@ class BeaconsPlugin(val registrar: Registrar) {
     companion object {
 
         fun init(application: Application, notificationTitle: String, notificationIcon: Int, notificationChannelId: String, notificationChannelName: String, pendingIntent: PendingIntent, callback: BackgroundMonitoringCallback) {
-            BeaconsClient.init(application, notificationTitle, notificationIcon, notificationChannelId, notificationChannelName, pendingIntent, callback)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = NotificationChannel(notificationChannelId, notificationChannelName, NotificationManager.IMPORTANCE_LOW)
+                (application.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).createNotificationChannel(channel)
+            }
+            val builder = NotificationCompat.Builder(application, notificationChannelId)
+            builder.setSmallIcon(notificationIcon)
+            builder.setContentTitle(notificationTitle)
+            builder.setContentIntent(pendingIntent)
+
+            BeaconsClient.init(application, callback, builder.build())
         }
 
         @JvmStatic
