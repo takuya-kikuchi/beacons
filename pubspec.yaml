@@ -12,7 +12,7 @@ dependencies:
     sdk: flutter
 
   streams_channel:
-    git: git@github.com:loup-v/streams_channel.git
+    git: https://github.com/awazgyawali/streams_channel.git
   flutter_local_notifications: ^0.5.1+2
 
 flutter:
