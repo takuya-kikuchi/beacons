@@ -26,46 +26,48 @@ class BeaconsPlugin(val registrar: Registrar) {
 
         registrar.addRequestPermissionsResultListener(permissionClient.listener)
 
-        beaconClient.bind(registrar.activity())
-        permissionClient.bind(registrar.activity())
+        beaconClient.bind(registrar.context())
+        permissionClient.bind(registrar.activeContext()) //the current Activity, if not null, otherwise the Application.
 
         Log.d("beacons", "register lifecycle callbacks $this, ${beaconClient}")
 
-        registrar.activity().application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-                Log.d("beacons", "bind $beaconClient to $activity")
-                beaconClient.bind(activity)
-                permissionClient.bind(activity)
-            }
+        if (registrar.activity() != null) {
+            registrar.activity().application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+                override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+                    Log.d("beacons", "bind $beaconClient to $activity")
+                    beaconClient.bind(activity)
+                    permissionClient.bind(activity)
+                }
 
-            override fun onActivityDestroyed(activity: Activity) {
-                Log.d("beacons", "unbind $beaconClient to $activity")
-                beaconClient.unbind()
-                permissionClient.unbind()
-            }
+                override fun onActivityDestroyed(activity: Activity) {
+                    Log.d("beacons", "unbind $beaconClient to $activity")
+                    beaconClient.unbind()
+                    permissionClient.unbind()
+                }
 
-            override fun onActivityResumed(activity: Activity?) {
-                Log.d("beacons", "notify resuming to $beaconClient ($activity)")
-                beaconClient.resume()
-            }
+                override fun onActivityResumed(activity: Activity?) {
+                    Log.d("beacons", "notify resuming to $beaconClient ($activity)")
+                    beaconClient.resume()
+                }
 
-            override fun onActivityPaused(activity: Activity?) {
-                Log.d("beacons", "notify pausing to $beaconClient ($activity)")
-                beaconClient.pause()
-            }
+                override fun onActivityPaused(activity: Activity?) {
+                    Log.d("beacons", "notify pausing to $beaconClient ($activity)")
+                    beaconClient.pause()
+                }
 
-            override fun onActivityStarted(activity: Activity?) {
+                override fun onActivityStarted(activity: Activity?) {
 
-            }
+                }
 
-            override fun onActivitySaveInstanceState(activity: Activity?, outState: Bundle?) {
+                override fun onActivitySaveInstanceState(activity: Activity?, outState: Bundle?) {
 
-            }
+                }
 
-            override fun onActivityStopped(activity: Activity?) {
+                override fun onActivityStopped(activity: Activity?) {
 
-            }
-        })
+                }
+            })
+        }
 
         channels.register(this)
     }
