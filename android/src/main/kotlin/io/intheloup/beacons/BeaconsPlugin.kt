@@ -21,6 +21,8 @@ class BeaconsPlugin(val registrar: Registrar) {
     private val permissionClient = PermissionClient()
     private val beaconClient = BeaconsClient(permissionClient)
     private val channels = Channels(permissionClient, beaconClient)
+    private var boundContext: Context?
+    private var boundActiveContext: Context?
 
     init {
 
@@ -29,20 +31,23 @@ class BeaconsPlugin(val registrar: Registrar) {
         beaconClient.bind(registrar.context())
         permissionClient.bind(registrar.activeContext()) //the current Activity, if not null, otherwise the Application.
 
-        Log.d("beacons", "register lifecycle callbacks $this, ${beaconClient}")
+        boundActiveContext = registrar.activeContext()
+        boundContext = registrar.context()
+
+        Log.d("beacons", "register lifecycle callbacks $this, ${beaconClient}, ${registrar.activity()}")
 
         if (registrar.activity() != null) {
             registrar.activity().application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
                 override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
-                    Log.d("beacons", "bind $beaconClient to $activity")
-                    beaconClient.bind(activity)
-                    permissionClient.bind(activity)
+                    Log.d("beacons", "bind $beaconClient to $activity (${registrar.context()})")
+                    if(boundContext == activity) beaconClient.bind(activity)
+                    if(boundActiveContext == activity) permissionClient.bind(activity)
                 }
 
                 override fun onActivityDestroyed(activity: Activity) {
                     Log.d("beacons", "unbind $beaconClient to $activity")
-                    beaconClient.unbind()
-                    permissionClient.unbind()
+                    if(boundContext == activity) beaconClient.unbind()
+                    if(boundActiveContext == activity) permissionClient.unbind()
                 }
 
                 override fun onActivityResumed(activity: Activity?) {
